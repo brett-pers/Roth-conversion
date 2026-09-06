@@ -1,4 +1,4 @@
-# Bracket Filling — Roth Conversion & Social Security Planner
+# Roth Conversion Planner
 
 A single-page, interactive retirement model. It runs a year-by-year projection
 (2027–2055) comparing two Social Security claiming ages, and simulates
