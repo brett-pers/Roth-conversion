@@ -1,0 +1,700 @@
+<title>Bracket Filling</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f1ec;
+  --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --accent:#2a78d6; --accent-ink:#ffffff; --accent-wash:rgba(42,120,214,0.10);
+  --series-ira:#2a78d6; --series-taxable:#eb6834; --series-roth:#1baf7a;
+  --good:#0ca30c; --good-wash:rgba(12,163,12,0.10); --critical:#d03b3b;
+  --shadow: 0 1px 2px rgba(11,11,11,0.06), 0 8px 24px rgba(11,11,11,0.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#201f1c;
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+    --accent:#3987e5; --accent-ink:#0b0b0b; --accent-wash:rgba(57,135,229,0.14);
+    --series-ira:#3987e5; --series-taxable:#d95926; --series-roth:#199e70;
+    --good:#0ca30c; --good-wash:rgba(12,163,12,0.14); --critical:#e66767;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --page:#0d0d0d; --surface:#1a1a19; --surface-2:#201f1c;
+  --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --baseline:#383835; --border:rgba(255,255,255,0.10);
+  --accent:#3987e5; --accent-ink:#0b0b0b; --accent-wash:rgba(57,135,229,0.14);
+  --series-ira:#3987e5; --series-taxable:#d95926; --series-roth:#199e70;
+  --good:#0ca30c; --good-wash:rgba(12,163,12,0.14); --critical:#e66767;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--page); color:var(--ink);
+  font-family:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-size:14.5px; line-height:1.5;
+}
+h1,h2,h3{ font-family:"Newsreader", Georgia, serif; text-wrap:balance; margin:0; }
+.mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric:tabular-nums; }
+.eyebrow{ font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+
+.wrap{ max-width:1280px; margin:0 auto; padding:28px 20px 60px; }
+
+.masthead{ display:flex; align-items:baseline; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+.masthead h1{ font-size:2rem; font-weight:600; }
+.masthead .sub{ color:var(--ink-2); font-size:0.92rem; max-width:46ch; }
+.person-card{ text-align:right; font-size:0.8rem; color:var(--muted); }
+.person-card b{ color:var(--ink-2); font-weight:500; }
+
+.app{ display:grid; grid-template-columns:300px 1fr; gap:22px; align-items:start; }
+@media (max-width:900px){ .app{ grid-template-columns:1fr; } .sidebar{ position:static !important; max-height:none !important; } }
+
+.sidebar{
+  position:sticky; top:20px; max-height:calc(100vh - 40px); overflow-y:auto;
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:18px 18px 20px;
+}
+.sidebar-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+.reset-btn{
+  font:inherit; font-size:12px; color:var(--accent); background:none; border:none; cursor:pointer;
+  padding:2px 0; text-decoration:underline; text-underline-offset:2px;
+}
+fieldset{ border:none; margin:0; padding:14px 0 4px; border-top:1px solid var(--border); }
+fieldset:first-of-type{ border-top:none; padding-top:10px; }
+legend{ padding:0; font-size:12px; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:8px; }
+.slider-row{ margin-bottom:14px; }
+.slider-row:last-child{ margin-bottom:0; }
+.slider-row .row-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:5px; }
+.slider-row label{ font-size:12.5px; color:var(--ink-2); }
+.slider-row .val{ font-size:12.5px; font-weight:600; color:var(--ink); white-space:nowrap; }
+.slider-row.highlight .val{ color:var(--accent); }
+.slider-row.highlight label{ color:var(--ink); font-weight:500; }
+input[type=range]{
+  -webkit-appearance:none; appearance:none; width:100%; height:18px; background:transparent; cursor:pointer; margin:0;
+}
+input[type=range]::-webkit-slider-runnable-track{ height:4px; border-radius:2px; background:var(--baseline); }
+input[type=range]::-moz-range-track{ height:4px; border-radius:2px; background:var(--baseline); }
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--accent);
+  border:2px solid var(--surface); box-shadow:0 0 0 1px var(--accent); margin-top:-5.5px; cursor:pointer;
+}
+input[type=range]::-moz-range-thumb{
+  width:15px; height:15px; border-radius:50%; background:var(--accent); border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--accent); cursor:pointer;
+}
+input[type=range]:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:8px; }
+.slider-row.highlight input[type=range]::-webkit-slider-runnable-track{ background:var(--accent-wash); }
+
+main{ min-width:0; }
+
+.headline{
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:20px 22px; margin-bottom:18px; box-shadow:var(--shadow);
+}
+.headline-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; align-items:end; }
+@media (max-width:720px){ .headline-grid{ grid-template-columns:1fr; } }
+.headline-metric .eyebrow{ margin-bottom:4px; }
+.headline-metric .num{ font-family:"Newsreader",serif; font-size:1.9rem; font-weight:600; }
+.headline-metric .cap{ font-size:0.78rem; color:var(--muted); margin-top:2px;}
+.headline-metric.delta .num{ color:var(--good); }
+.headline-metric.delta .num.neg{ color:var(--critical); }
+.headline-note{ font-size:0.8rem; color:var(--ink-2); margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+
+.panel{
+  background:var(--surface); border:1px solid var(--border); border-radius:10px;
+  padding:18px 20px 14px; margin-bottom:18px; box-shadow:var(--shadow);
+}
+.panel-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:4px; flex-wrap:wrap; }
+.panel-head h2{ font-size:1.15rem; font-weight:600; font-style:italic; }
+.panel-sub{ font-size:0.82rem; color:var(--muted); margin-bottom:10px; }
+
+.pillgroup{ display:inline-flex; background:var(--surface-2); border:1px solid var(--border); border-radius:999px; padding:3px; gap:2px; }
+.pillgroup button{
+  font:inherit; font-size:12.5px; font-weight:500; border:none; background:none; color:var(--ink-2);
+  padding:5px 13px; border-radius:999px; cursor:pointer;
+}
+.pillgroup button.active{ background:var(--accent); color:var(--accent-ink); font-weight:600; }
+
+.chart-wrap{ position:relative; }
+.chart-wrap svg{ width:100%; height:auto; display:block; overflow:visible; }
+.tooltip{
+  position:absolute; pointer-events:none; background:var(--ink); color:var(--page);
+  border-radius:7px; padding:8px 11px; font-size:12px; line-height:1.55; white-space:nowrap;
+  box-shadow:0 6px 20px rgba(0,0,0,0.25); opacity:0; transition:opacity .08s; z-index:5;
+}
+:root:not([data-theme="light"]) .tooltip, :root[data-theme="dark"] .tooltip{ background:var(--surface-2); color:var(--ink); border:1px solid var(--border); }
+.tooltip .tt-row{ display:flex; justify-content:space-between; gap:14px; }
+.tooltip .tt-sw{ display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:5px; }
+.legend{ display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; font-size:12.5px; color:var(--ink-2); }
+.legend .sw{ display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:6px; position:relative; top:1px; }
+.legend .line-sw{ width:16px; height:2px; border-radius:1px; top:-3px; }
+.legend .dash-sw{ background-image:repeating-linear-gradient(to right, currentColor 0 5px, transparent 5px 9px); background-color:transparent !important; height:2px; width:16px; }
+
+table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+.table-scroll{ overflow-x:auto; border-radius:8px; }
+th,td{ text-align:right; padding:6px 7px; white-space:nowrap; border-bottom:1px solid var(--grid); }
+th:first-child, td:first-child{ text-align:left; }
+thead th{ font-size:10px; letter-spacing:0.02em; text-transform:uppercase; color:var(--muted); font-weight:600; border-bottom:1px solid var(--baseline); position:sticky; top:0; background:var(--surface); line-height:1.35; vertical-align:bottom; }
+tbody tr:hover{ background:var(--surface-2); }
+td.mono, th.mono{ font-family:"IBM Plex Mono", monospace; }
+
+.compare-table td:nth-child(2), .compare-table td:nth-child(3){ font-family:"IBM Plex Mono", monospace; font-variant-numeric:tabular-nums; }
+.compare-table td:nth-child(4){ font-family:"IBM Plex Mono", monospace; font-variant-numeric:tabular-nums; font-weight:600; }
+.compare-table .pos{ color:var(--good); }
+.compare-table .neg{ color:var(--critical); }
+
+.caveats{ font-size:0.82rem; color:var(--ink-2); }
+.caveats ul{ margin:8px 0 0; padding-left:18px; }
+.caveats li{ margin-bottom:5px; }
+.disclaimer{ margin-top:14px; padding-top:12px; border-top:1px solid var(--border); font-size:0.78rem; color:var(--muted); }
+</style>
+
+<div class="wrap">
+
+  <div class="masthead">
+    <div>
+      <h1>Bracket Filling</h1>
+      <div class="sub">A year-by-year Roth conversion &amp; Social Security timing model &mdash; convert just enough IRA each year to fill your target tax bracket, drawn from your own retirement numbers.</div>
+    </div>
+    <div class="person-card">Born 12/19/1960 &middot; retires 2/1/2027<br><b>Single filer</b> &middot; California &middot; RMD age 75</div>
+  </div>
+
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <span class="eyebrow">Assumptions</span>
+        <button class="reset-btn" id="resetBtn">Reset to defaults</button>
+      </div>
+      <div id="sliderHost"></div>
+    </aside>
+
+    <main>
+
+      <div class="headline" id="headline"></div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Account balances over time</h2>
+          <div class="pillgroup" id="scenarioPills">
+            <button data-scenario="A" class="active">Scenario A &middot; claim 66y2mo</button>
+            <button data-scenario="B">Scenario B &middot; claim age 70</button>
+          </div>
+        </div>
+        <div class="panel-sub" id="stackedSub"></div>
+        <div class="chart-wrap" id="stackedChartWrap">
+          <div class="tooltip" id="stackedTooltip"></div>
+        </div>
+        <div class="legend">
+          <span><span class="sw" style="background:var(--series-ira)"></span>IRA / pre-tax</span>
+          <span><span class="sw" style="background:var(--series-taxable)"></span>Taxable brokerage</span>
+          <span><span class="sw" style="background:var(--series-roth)"></span>Roth</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>After-tax net worth, both scenarios</h2></div>
+        <div class="panel-sub">Total portfolio minus the tax still owed on the remaining IRA balance &mdash; the number that's actually comparable across accounts.</div>
+        <div class="chart-wrap" id="lineChartWrap">
+          <div class="tooltip" id="lineTooltip"></div>
+        </div>
+        <div class="legend">
+          <span><span class="sw line-sw" style="background:var(--accent)"></span>Scenario A &mdash; claim at 66y2mo</span>
+          <span><span class="sw dash-sw" style="color:var(--accent)"></span>Scenario B &mdash; delay to 70</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Lifetime totals</h2></div>
+        <div class="panel-sub">Summed or measured across the full 2027&ndash;2055 projection.</div>
+        <div class="table-scroll">
+          <table class="compare-table" id="compareTable"></table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Year-by-year detail</h2>
+          <div class="pillgroup" id="tablePills">
+            <button data-scenario="A" class="active">Scenario A</button>
+            <button data-scenario="B">Scenario B</button>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table id="yearTable"></table>
+        </div>
+      </div>
+
+      <div class="panel caveats">
+        <div class="panel-head"><h2>What this model simplifies</h2></div>
+        <ul>
+          <li>Flat real investment returns every year &mdash; no market volatility or sequence-of-returns risk.</li>
+          <li>California tax brackets are an approximation, not the officially indexed 2026 table.</li>
+          <li>Domestic partnership is modeled under federal filing status <b>Single</b> &mdash; confirm this matches your actual filing status.</li>
+          <li>Excludes the paid-off house and any Social Security COLA beyond the embedded real-return assumption.</li>
+          <li>Social Security taxability uses a flat 85%-of-benefit inclusion rate rather than the tiered IRS formula.</li>
+        </ul>
+        <div class="disclaimer">This is a planning illustration built from one household's own inputs &mdash; not tax or investment advice. All figures are in constant 2026 real dollars.</div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+(function(){
+
+// ---------- Reference tables (2026, single filer, real $) ----------
+const FEDERAL_BRACKETS = [
+  [0,0.10,0],[12400,0.12,1240],[50400,0.22,5800],[105700,0.24,17966],
+  [201775,0.32,41024],[256225,0.35,58448],[640600,0.37,192979.25]
+];
+const CA_BRACKETS = [
+  [0,0.010,0],[10756,0.020,107.56],[25499,0.040,402.42],[40245,0.060,992.26],
+  [55866,0.080,1929.52],[70606,0.093,3108.72],[360659,0.103,30088.65],
+  [432787,0.113,37517.63],[721314,0.123,70121.18]
+];
+const IRMAA_TABLE = [[109000,0],[137000,1148.40],[171000,2884.80],[205000,4620.00],[499999,6355.20],[Infinity,6936.00]];
+const RMD_DIVISORS = {75:24.6,76:23.7,77:22.9,78:22.0,79:21.1,80:20.2,81:19.4,82:18.5,83:17.7,84:16.8,
+  85:16.0,86:15.2,87:14.4,88:13.7,89:12.9,90:12.2,91:11.5,92:10.8,93:10.1,94:9.5,95:8.9};
+
+function bracketTax(income, table){
+  let row = table[0];
+  for (const r of table){ if (income >= r[0]) row = r; else break; }
+  return row[2] + (income - row[0]) * row[1];
+}
+function marginalRate(income, table){
+  let row = table[0];
+  for (const r of table){ if (income >= r[0]) row = r; else break; }
+  return row[1];
+}
+function irmaaLookup(magi){
+  for (const [ceil, amt] of IRMAA_TABLE){ if (magi <= ceil) return amt; }
+  return IRMAA_TABLE[IRMAA_TABLE.length-1][1];
+}
+
+// ---------- Slider config ----------
+const SLIDERS = [
+  {id:'iraBalance', group:'Balances today', label:'IRA / pre-tax balance', min:0, max:5000000, step:50000, def:2000000, fmt:'currency'},
+  {id:'taxableBalance', group:'Balances today', label:'Taxable brokerage balance', min:0, max:5000000, step:50000, def:2500000, fmt:'currency'},
+  {id:'rothBalance', group:'Balances today', label:'Roth balance', min:0, max:2000000, step:25000, def:0, fmt:'currency'},
+  {id:'growth', group:'Growth &amp; yield', label:'Real investment return (blended)', min:0, max:0.10, step:0.0025, def:0.05, fmt:'percent'},
+  {id:'taxableYield', group:'Growth &amp; yield', label:'Taxable account ordinary yield', min:0, max:0.06, step:0.0025, def:0.02, fmt:'percent'},
+  {id:'livingMonthly', group:'Spending', label:'Living expenses (monthly, today)', min:2000, max:15000, step:250, def:5000, fmt:'currency'},
+  {id:'ss66', group:'Social Security', label:'SS benefit if claimed at 66y2mo (monthly)', min:1000, max:6000, step:50, def:3800, fmt:'currency'},
+  {id:'partB', group:'Healthcare', label:'Medicare Part B premium (annual)', min:1500, max:4000, step:10, def:2434.80, fmt:'currency'},
+  {id:'medigap', group:'Healthcare', label:'Medigap Plan G estimate, CA (annual)', min:1000, max:8000, step:100, def:4200, fmt:'currency'},
+  {id:'partD', group:'Healthcare', label:'Part D drug plan estimate (annual)', min:100, max:2000, step:50, def:600, fmt:'currency'},
+  {id:'preRetMAGI', group:'Taxes', label:'Pre-retirement MAGI (2027&ndash;28 IRMAA)', min:100000, max:500000, step:10000, def:250000, fmt:'currency'},
+  {id:'targetAGI', group:'Taxes', label:'Target annual AGI for Roth conversions', min:0, max:450000, step:5000, def:200000, fmt:'currency', highlight:true},
+  {id:'heirTaxRate', group:'Taxes', label:"Est. heir marginal tax rate on IRA $", min:0.10, max:0.45, step:0.01, def:0.32, fmt:'percent'},
+];
+
+const STORE_KEY = 'bracketFilling.inputs.v1';
+function loadState(){
+  const state = {};
+  SLIDERS.forEach(s => state[s.id] = s.def);
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw){ const saved = JSON.parse(raw); SLIDERS.forEach(s=>{ if (typeof saved[s.id]==='number') state[s.id]=saved[s.id]; }); }
+  }catch(e){}
+  return state;
+}
+function saveState(state){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+}
+
+let state = loadState();
+
+// ---------- Formatting ----------
+function fmtCurrency(v, opts){
+  opts = opts || {};
+  const neg = v < -0.5;
+  const abs = Math.abs(v);
+  const s = '$' + Math.round(abs).toLocaleString('en-US');
+  return (neg ? '-' : '') + s;
+}
+function fmtCompact(v){
+  const neg = v < 0; const abs = Math.abs(v);
+  let s;
+  if (abs >= 1000000) s = '$' + (Math.round(abs/100000)/10).toFixed(1).replace(/\.0$/,'') + 'M';
+  else if (abs >= 1000) s = '$' + Math.round(abs/1000) + 'K';
+  else s = '$' + Math.round(abs);
+  return (neg?'-':'') + s;
+}
+function fmtPercent(v){ return (v*100).toFixed(2).replace(/0+$/,'').replace(/\.$/,'') + '%'; }
+
+// ---------- Projection engine ----------
+function projectScenario(inp, scenarioKey){
+  const FRA_months = 804, claim66_months = 794;
+  const monthsEarly = FRA_months - claim66_months;
+  const FRA_PIA = inp.ss66 / (1 - monthsEarly*5/9/100);
+  const ss70Monthly = FRA_PIA * (1 + 0.08*3);
+
+  let iraBeg = inp.iraBalance, taxableBeg = inp.taxableBalance, rothBeg = inp.rothBalance;
+  const agiHistory = {};
+  const rows = [];
+
+  for (let Y = 2027; Y <= 2055; Y++){
+    const age = Y - 1960;
+
+    let ssAnnual;
+    if (scenarioKey === 'A'){
+      ssAnnual = Y < 2027 ? 0 : (Y === 2027 ? inp.ss66*11 : inp.ss66*12);
+    } else {
+      ssAnnual = Y < 2030 ? 0 : (Y === 2030 ? ss70Monthly*1 : ss70Monthly*12);
+    }
+
+    const rmd = age < 75 ? 0 : iraBeg / RMD_DIVISORS[Math.min(age,95)];
+    const taxInvIncome = taxableBeg * inp.taxableYield;
+    const taxableSS = 0.85 * ssAnnual;
+    const otherIncome = taxableSS + taxInvIncome + rmd;
+    const conversion = Math.max(0, Math.min(inp.targetAGI - otherIncome, iraBeg - rmd));
+
+    const agiFed = (rmd + conversion) + taxableSS + taxInvIncome;
+    const fedTaxableIncome = Math.max(0, agiFed - 18150);
+    const fedTax = bracketTax(fedTaxableIncome, FEDERAL_BRACKETS);
+    const fedMarginalRate = marginalRate(fedTaxableIncome, FEDERAL_BRACKETS);
+
+    const caAGI = (rmd + conversion) + taxInvIncome;
+    const caTaxableIncome = Math.max(0, caAGI - 5600);
+    const caTax = bracketTax(caTaxableIncome, CA_BRACKETS);
+    const caMarginalRate = marginalRate(caTaxableIncome, CA_BRACKETS);
+
+    agiHistory[Y] = agiFed;
+    const magiForIrmaa = Y <= 2028 ? inp.preRetMAGI : (agiHistory[Y-2] !== undefined ? agiHistory[Y-2] : inp.preRetMAGI);
+    const irmaaSurcharge = irmaaLookup(magiForIrmaa);
+
+    const baseMedicare = inp.partB + inp.medigap + inp.partD;
+    const medicareCost = (Y === 2027 ? baseMedicare*11/12 : baseMedicare);
+    const healthcareCost = medicareCost + irmaaSurcharge;
+    const livingExpenses = inp.livingMonthly * 12 * (Y === 2027 ? 11/12 : 1);
+
+    const spendableInflow = ssAnnual + rmd;
+    const totalCashNeed = livingExpenses + healthcareCost + fedTax + caTax;
+    const taxableWithdrawal = Math.max(0, totalCashNeed - spendableInflow);
+    const taxableSurplus = Math.max(0, spendableInflow - totalCashNeed);
+
+    const iraEnd = (iraBeg - rmd - conversion) * (1 + inp.growth);
+    const taxableEnd = (taxableBeg + taxableSurplus - taxableWithdrawal) * (1 + inp.growth);
+    const rothEnd = (rothBeg + conversion) * (1 + inp.growth);
+    const totalPortfolio = iraEnd + taxableEnd + rothEnd;
+    const afterTaxNetWorth = totalPortfolio - iraEnd * inp.heirTaxRate;
+
+    rows.push({
+      year:Y, age, ssAnnual, rmd, conversion, estIncome: agiFed, fedTax, fedMarginalRate, caTax, caMarginalRate, totalTax: fedTax+caTax,
+      irmaaSurcharge, healthcareCost, livingExpenses,
+      iraBeg, taxableBeg, rothBeg, iraEnd, taxableEnd, rothEnd, totalPortfolio, afterTaxNetWorth
+    });
+
+    iraBeg = iraEnd; taxableBeg = taxableEnd; rothBeg = rothEnd;
+  }
+  return rows;
+}
+
+function summarize(rows){
+  const sum = (k) => rows.reduce((a,r)=>a+r[k],0);
+  const at90 = rows.find(r=>r.age===90), at95 = rows.find(r=>r.age===95);
+  return {
+    cumSS: sum('ssAnnual'), cumConversion: sum('conversion'), cumTax: sum('totalTax'),
+    cumIrmaa: sum('irmaaSurcharge'),
+    portfolio90: at90.totalPortfolio, portfolio95: at95.totalPortfolio,
+    netWorth90: at90.afterTaxNetWorth, netWorth95: at95.afterTaxNetWorth
+  };
+}
+
+// ---------- Chart geometry ----------
+const CW = 760, CH_STACK = 300, CH_LINE = 260;
+const M = {l:56, r:14, t:16, b:26};
+
+function niceCeil(v){
+  if (v <= 0) return 1;
+  const mag = Math.pow(10, Math.floor(Math.log10(v)));
+  const n = v / mag;
+  let step;
+  if (n <= 1) step = 1; else if (n <= 2) step = 2; else if (n <= 2.5) step = 2.5; else if (n <= 5) step = 5; else step = 10;
+  return step * mag;
+}
+
+function scaleX(i, n, w){ return M.l + (n<=1?0:i/(n-1)) * (w - M.l - M.r); }
+function scaleY(v, maxY, h){ return M.t + (1 - (maxY? v/maxY : 0)) * (h - M.t - M.b); }
+
+function gridAndAxis(years, maxY, w, h, svgParts){
+  const plotL = M.l, plotR = w - M.r, plotT = M.t, plotB = h - M.b;
+  // horizontal gridlines
+  for (let k=0; k<=4; k++){
+    const v = maxY * k/4;
+    const y = scaleY(v, maxY, h);
+    svgParts.push(`<line x1="${plotL}" y1="${y}" x2="${plotR}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`);
+    svgParts.push(`<text x="${plotL-8}" y="${y+4}" text-anchor="end" font-size="10.5" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${fmtCompact(v)}</text>`);
+  }
+  svgParts.push(`<line x1="${plotL}" y1="${plotB}" x2="${plotR}" y2="${plotB}" stroke="var(--baseline)" stroke-width="1"/>`);
+  // x labels every 4 years
+  years.forEach((yr,i) => {
+    if (i % 4 === 0 || i === years.length-1){
+      const x = scaleX(i, years.length, w);
+      svgParts.push(`<text x="${x}" y="${plotB+18}" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${yr}</text>`);
+    }
+  });
+}
+
+function areaPath(lower, upper, years, maxY, w, h){
+  const n = years.length;
+  let d = '';
+  for (let i=0;i<n;i++){ const x=scaleX(i,n,w), y=scaleY(upper[i],maxY,h); d += (i===0?'M':'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' '; }
+  for (let i=n-1;i>=0;i--){ const x=scaleX(i,n,w), y=scaleY(lower[i],maxY,h); d += 'L' + x.toFixed(1) + ',' + y.toFixed(1) + ' '; }
+  d += 'Z';
+  return d;
+}
+function linePath(values, years, maxY, w, h){
+  const n = years.length;
+  let d = '';
+  for (let i=0;i<n;i++){ const x=scaleX(i,n,w), y=scaleY(values[i],maxY,h); d += (i===0?'M':'L') + x.toFixed(1) + ',' + y.toFixed(1) + ' '; }
+  return d;
+}
+
+function renderStackedChart(rows, allRows){
+  const years = rows.map(r=>r.year);
+  const maxTotal = Math.max(...allRows.map(r=>r.totalPortfolio));
+  const maxY = niceCeil(maxTotal * 1.05);
+  const ira = rows.map(r=>r.iraEnd), tax = rows.map(r=>r.taxableEnd), roth = rows.map(r=>r.rothEnd);
+  const c1 = ira, c2 = ira.map((v,i)=>v+tax[i]), c3 = c2.map((v,i)=>v+roth[i]);
+  const zero = ira.map(()=>0);
+
+  const parts = [];
+  gridAndAxis(years, maxY, CW, CH_STACK, parts);
+  parts.push(`<path d="${areaPath(zero, c1, years, maxY, CW, CH_STACK)}" fill="var(--series-ira)" fill-opacity="0.85"/>`);
+  parts.push(`<path d="${areaPath(c1, c2, years, maxY, CW, CH_STACK)}" fill="var(--series-taxable)" fill-opacity="0.85"/>`);
+  parts.push(`<path d="${areaPath(c2, c3, years, maxY, CW, CH_STACK)}" fill="var(--series-roth)" fill-opacity="0.85"/>`);
+
+  const svg = `<svg viewBox="0 0 ${CW} ${CH_STACK}" id="stackedSvg">${parts.join('')}
+    <rect id="stackedOverlay" x="${M.l}" y="${M.t}" width="${CW-M.l-M.r}" height="${CH_STACK-M.t-M.b}" fill="transparent"/>
+    <line id="stackedCrosshair" x1="0" y1="${M.t}" x2="0" y2="${CH_STACK-M.b}" stroke="var(--ink)" stroke-opacity="0.25" stroke-width="1" visibility="hidden"/>
+  </svg>`;
+  document.getElementById('stackedChartWrap').querySelector('svg')?.remove();
+  document.getElementById('stackedChartWrap').insertAdjacentHTML('afterbegin', svg);
+
+  const svgEl = document.getElementById('stackedSvg');
+  const overlay = document.getElementById('stackedOverlay');
+  const crosshair = document.getElementById('stackedCrosshair');
+  const tooltip = document.getElementById('stackedTooltip');
+  const wrap = document.getElementById('stackedChartWrap');
+
+  function onMove(evt){
+    const rect = svgEl.getBoundingClientRect();
+    const scaleXr = CW / rect.width;
+    const px = (evt.clientX - rect.left) * scaleXr;
+    const n = years.length;
+    let i = Math.round((px - M.l) / (CW - M.l - M.r) * (n-1));
+    i = Math.max(0, Math.min(n-1, i));
+    const x = scaleX(i, n, CW);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x); crosshair.setAttribute('visibility','visible');
+    const r = rows[i];
+    tooltip.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${r.year} &middot; age ${r.age}</div>
+      <div class="tt-row"><span><span class="tt-sw" style="background:var(--series-ira)"></span>IRA</span><span>${fmtCompact(r.iraEnd)}</span></div>
+      <div class="tt-row"><span><span class="tt-sw" style="background:var(--series-taxable)"></span>Taxable</span><span>${fmtCompact(r.taxableEnd)}</span></div>
+      <div class="tt-row"><span><span class="tt-sw" style="background:var(--series-roth)"></span>Roth</span><span>${fmtCompact(r.rothEnd)}</span></div>
+      <div class="tt-row" style="margin-top:3px;border-top:1px solid rgba(255,255,255,0.15);padding-top:3px"><span>Total</span><span>${fmtCompact(r.totalPortfolio)}</span></div>`;
+    const wrapRect = wrap.getBoundingClientRect();
+    let left = (evt.clientX - wrapRect.left) + 14;
+    let top = (evt.clientY - wrapRect.top) - 50;
+    if (left + 170 > wrapRect.width) left = (evt.clientX - wrapRect.left) - 184;
+    tooltip.style.left = left + 'px'; tooltip.style.top = Math.max(0,top) + 'px'; tooltip.style.opacity = '1';
+  }
+  overlay.addEventListener('mousemove', onMove);
+  overlay.addEventListener('mouseleave', () => { tooltip.style.opacity='0'; crosshair.setAttribute('visibility','hidden'); });
+}
+
+function renderLineChart(rowsA, rowsB){
+  const years = rowsA.map(r=>r.year);
+  const valsA = rowsA.map(r=>r.afterTaxNetWorth), valsB = rowsB.map(r=>r.afterTaxNetWorth);
+  const maxY = niceCeil(Math.max(...valsA, ...valsB) * 1.08);
+  const parts = [];
+  gridAndAxis(years, maxY, CW, CH_LINE, parts);
+  parts.push(`<path d="${linePath(valsA, years, maxY, CW, CH_LINE)}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>`);
+  parts.push(`<path d="${linePath(valsB, years, maxY, CW, CH_LINE)}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-dasharray="6 5"/>`);
+  const n = years.length;
+  const lastX = scaleX(n-1, n, CW);
+  parts.push(`<circle cx="${lastX}" cy="${scaleY(valsA[n-1],maxY,CH_LINE)}" r="3.5" fill="var(--accent)"/>`);
+  parts.push(`<circle cx="${lastX}" cy="${scaleY(valsB[n-1],maxY,CH_LINE)}" r="3.5" fill="var(--accent)"/>`);
+
+  const svg = `<svg viewBox="0 0 ${CW} ${CH_LINE}" id="lineSvg">${parts.join('')}
+    <rect id="lineOverlay" x="${M.l}" y="${M.t}" width="${CW-M.l-M.r}" height="${CH_LINE-M.t-M.b}" fill="transparent"/>
+    <line id="lineCrosshair" x1="0" y1="${M.t}" x2="0" y2="${CH_LINE-M.b}" stroke="var(--ink)" stroke-opacity="0.25" stroke-width="1" visibility="hidden"/>
+  </svg>`;
+  document.getElementById('lineChartWrap').querySelector('svg')?.remove();
+  document.getElementById('lineChartWrap').insertAdjacentHTML('afterbegin', svg);
+
+  const svgEl = document.getElementById('lineSvg');
+  const overlay = document.getElementById('lineOverlay');
+  const crosshair = document.getElementById('lineCrosshair');
+  const tooltip = document.getElementById('lineTooltip');
+  const wrap = document.getElementById('lineChartWrap');
+
+  function onMove(evt){
+    const rect = svgEl.getBoundingClientRect();
+    const scaleXr = CW / rect.width;
+    const px = (evt.clientX - rect.left) * scaleXr;
+    let i = Math.round((px - M.l) / (CW - M.l - M.r) * (n-1));
+    i = Math.max(0, Math.min(n-1, i));
+    const x = scaleX(i, n, CW);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x); crosshair.setAttribute('visibility','visible');
+    const diff = valsB[i] - valsA[i];
+    tooltip.innerHTML = `<div style="font-weight:600;margin-bottom:4px">${years[i]} &middot; age ${rowsA[i].age}</div>
+      <div class="tt-row"><span>Scenario A</span><span>${fmtCompact(valsA[i])}</span></div>
+      <div class="tt-row"><span>Scenario B</span><span>${fmtCompact(valsB[i])}</span></div>
+      <div class="tt-row" style="margin-top:3px;border-top:1px solid rgba(255,255,255,0.15);padding-top:3px"><span>B &minus; A</span><span>${diff>=0?'+':''}${fmtCompact(diff)}</span></div>`;
+    const wrapRect = wrap.getBoundingClientRect();
+    let left = (evt.clientX - wrapRect.left) + 14;
+    let top = (evt.clientY - wrapRect.top) - 50;
+    if (left + 170 > wrapRect.width) left = (evt.clientX - wrapRect.left) - 184;
+    tooltip.style.left = left + 'px'; tooltip.style.top = Math.max(0,top) + 'px'; tooltip.style.opacity = '1';
+  }
+  overlay.addEventListener('mousemove', onMove);
+  overlay.addEventListener('mouseleave', () => { tooltip.style.opacity='0'; crosshair.setAttribute('visibility','hidden'); });
+}
+
+// ---------- Render: sidebar sliders ----------
+function renderSliders(){
+  const groups = {};
+  SLIDERS.forEach(s => { (groups[s.group] = groups[s.group]||[]).push(s); });
+  let html = '';
+  Object.keys(groups).forEach(g => {
+    html += `<fieldset><legend>${g}</legend>`;
+    groups[g].forEach(s => {
+      const v = state[s.id];
+      const display = s.fmt === 'percent' ? fmtPercent(v) : fmtCurrency(v);
+      html += `<div class="slider-row${s.highlight?' highlight':''}">
+        <div class="row-top"><label for="in_${s.id}">${s.label}</label><span class="val" id="val_${s.id}">${display}</span></div>
+        <input type="range" id="in_${s.id}" min="${s.min}" max="${s.max}" step="${s.step}" value="${v}">
+      </div>`;
+    });
+    html += `</fieldset>`;
+  });
+  document.getElementById('sliderHost').innerHTML = html;
+  SLIDERS.forEach(s => {
+    document.getElementById('in_'+s.id).addEventListener('input', (e) => {
+      state[s.id] = parseFloat(e.target.value);
+      document.getElementById('val_'+s.id).textContent = s.fmt === 'percent' ? fmtPercent(state[s.id]) : fmtCurrency(state[s.id]);
+      saveState(state);
+      recompute();
+    });
+  });
+}
+
+// ---------- Render: headline, compare table, year table ----------
+let stackedScenario = 'A', tableScenario = 'A';
+
+function renderHeadline(sumA, sumB){
+  const diff = sumB.netWorth95 - sumA.netWorth95;
+  const pos = diff >= 0;
+  document.getElementById('headline').innerHTML = `
+    <div class="headline-grid">
+      <div class="headline-metric">
+        <div class="eyebrow">Scenario A &middot; claim 66y2mo</div>
+        <div class="num">${fmtCompact(sumA.netWorth95)}</div>
+        <div class="cap">after-tax net worth at age 95</div>
+      </div>
+      <div class="headline-metric">
+        <div class="eyebrow">Scenario B &middot; delay to 70</div>
+        <div class="num">${fmtCompact(sumB.netWorth95)}</div>
+        <div class="cap">after-tax net worth at age 95</div>
+      </div>
+      <div class="headline-metric delta">
+        <div class="eyebrow">Difference (B &minus; A)</div>
+        <div class="num${pos?'':' neg'}">${pos?'+':''}${fmtCompact(diff)}</div>
+        <div class="cap">${pos? 'in favor of delaying Social Security to 70':'in favor of claiming at 66y2mo'}</div>
+      </div>
+    </div>
+    <div class="headline-note">Both scenarios convert IRA to Roth every year up to the same target AGI, so the difference above is driven purely by Social Security timing and its knock-on effects on RMDs, IRMAA, and available conversion room.</div>`;
+}
+
+function renderCompareTable(sumA, sumB){
+  const rows = [
+    ['Cumulative Social Security collected', sumA.cumSS, sumB.cumSS],
+    ['Cumulative Roth converted', sumA.cumConversion, sumB.cumConversion],
+    ['Cumulative federal + CA tax paid', sumA.cumTax, sumB.cumTax],
+    ['Cumulative IRMAA surcharges', sumA.cumIrmaa, sumB.cumIrmaa],
+    ['Total portfolio at age 90', sumA.portfolio90, sumB.portfolio90],
+    ['Total portfolio at age 95', sumA.portfolio95, sumB.portfolio95],
+    ['After-tax net worth at age 90', sumA.netWorth90, sumB.netWorth90],
+    ['After-tax net worth at age 95', sumA.netWorth95, sumB.netWorth95],
+  ];
+  let html = `<thead><tr><th>Metric</th><th class="mono">Scenario A</th><th class="mono">Scenario B</th><th class="mono">B &minus; A</th></tr></thead><tbody>`;
+  rows.forEach(([label,a,b]) => {
+    const d = b-a; const cls = d>=0?'pos':'neg';
+    html += `<tr><td>${label}</td><td>${fmtCurrency(a)}</td><td>${fmtCurrency(b)}</td><td class="${cls}">${d>=0?'+':''}${fmtCurrency(d)}</td></tr>`;
+  });
+  html += `</tbody>`;
+  document.getElementById('compareTable').innerHTML = html;
+}
+
+function renderYearTable(rows){
+  let html = `<thead><tr>
+    <th>Year</th><th>Age</th><th class="mono">SS</th><th class="mono">RMD</th><th class="mono">Roth<br>conversion</th>
+    <th class="mono">Est.<br>income</th><th class="mono">Fed<br>tax</th><th class="mono">Fed<br>marginal</th>
+    <th class="mono">CA<br>tax</th><th class="mono">CA<br>marginal</th><th class="mono">IRMAA</th>
+    <th class="mono">IRA</th><th class="mono">Taxable</th><th class="mono">Roth</th>
+    <th class="mono">Total</th><th class="mono">After-tax<br>NW</th>
+  </tr></thead><tbody>`;
+  rows.forEach(r => {
+    html += `<tr>
+      <td>${r.year}</td><td>${r.age}</td>
+      <td class="mono">${fmtCompact(r.ssAnnual)}</td><td class="mono">${fmtCompact(r.rmd)}</td><td class="mono">${fmtCompact(r.conversion)}</td>
+      <td class="mono">${fmtCompact(r.estIncome)}</td><td class="mono">${fmtCompact(r.fedTax)}</td><td class="mono">${(r.fedMarginalRate*100).toFixed(0)}%</td>
+      <td class="mono">${fmtCompact(r.caTax)}</td><td class="mono">${(r.caMarginalRate*100).toFixed(1).replace(/\.0$/,'')}%</td><td class="mono">${fmtCompact(r.irmaaSurcharge)}</td>
+      <td class="mono">${fmtCompact(r.iraEnd)}</td><td class="mono">${fmtCompact(r.taxableEnd)}</td><td class="mono">${fmtCompact(r.rothEnd)}</td>
+      <td class="mono">${fmtCompact(r.totalPortfolio)}</td><td class="mono">${fmtCompact(r.afterTaxNetWorth)}</td>
+    </tr>`;
+  });
+  html += `</tbody>`;
+  document.getElementById('yearTable').innerHTML = html;
+}
+
+let rowsA, rowsB;
+function recompute(){
+  rowsA = projectScenario(state, 'A');
+  rowsB = projectScenario(state, 'B');
+  const sumA = summarize(rowsA), sumB = summarize(rowsB);
+  const allRows = rowsA.concat(rowsB);
+
+  renderHeadline(sumA, sumB);
+  renderStackedChart(stackedScenario === 'A' ? rowsA : rowsB, allRows);
+  document.getElementById('stackedSub').textContent = stackedScenario === 'A'
+    ? 'Scenario A - Social Security claimed at 66y2mo, starting February 2027.'
+    : 'Scenario B - Social Security delayed to age 70, starting December 2030.';
+  renderLineChart(rowsA, rowsB);
+  renderCompareTable(sumA, sumB);
+  renderYearTable(tableScenario === 'A' ? rowsA : rowsB);
+}
+
+document.getElementById('scenarioPills').addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  [...e.currentTarget.children].forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  stackedScenario = btn.dataset.scenario;
+  recompute();
+});
+document.getElementById('tablePills').addEventListener('click', (e) => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  [...e.currentTarget.children].forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  tableScenario = btn.dataset.scenario;
+  renderYearTable(tableScenario === 'A' ? rowsA : rowsB);
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  SLIDERS.forEach(s => state[s.id] = s.def);
+  saveState(state);
+  renderSliders();
+  recompute();
+});
+
+renderSliders();
+recompute();
+})();
+</script>
